@@ -1,4 +1,8 @@
-﻿using System.Linq;
+﻿using BookLotModel;
+using System;
+using System.Data;
+using System.Data.Entity;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -20,8 +24,11 @@ namespace Negrea_Daniel_Project
         ActionState action = ActionState.Nothing;
         BookLotEntitiesModel ctx = new BookLotEntitiesModel();
         CollectionViewSource customerVSource;
-
         CollectionViewSource customerOrdersVSource;
+        CollectionViewSource inventoryVSource;
+
+
+
         public MainWindow()
         {
             InitializeComponent();
@@ -31,28 +38,34 @@ namespace Negrea_Daniel_Project
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
 
-            customerVSource =
-((System.Windows.Data.CollectionViewSource)(this.FindResource("customerViewSource")));
+            customerVSource = ((System.Windows.Data.CollectionViewSource)(this.FindResource("customerViewSource")));
             customerVSource.Source = ctx.Customers.Local;
             ctx.Customers.Load();
 
-            customerOrdersVSource =
-((System.Windows.Data.CollectionViewSource)(this.FindResource("customerOrdersViewSource")));
-
-            //customerOrdersVSource.Source = ctx.Orders.Local;
+            customerOrdersVSource = ((System.Windows.Data.CollectionViewSource)(this.FindResource("customerOrdersViewSource")));
+            customerOrdersVSource.Source = ctx.Orders.Local;
             ctx.Orders.Load();
+
+
+            inventoryVSource =
+            ((System.Windows.Data.CollectionViewSource)(this.FindResource("inventoryViewSource")));
+            inventoryVSource.Source = ctx.Inventories.Local;
             ctx.Inventories.Load();
+
+
             cmbCustomers.ItemsSource = ctx.Customers.Local;
             //cmbCustomers.DisplayMemberPath = "FirstName";
             cmbCustomers.SelectedValuePath = "CustId";
-            cmbInventory.ItemsSource = ctx.Inventories.Local;
-            //cmbInventory.DisplayMemberPath = "Make";
-            cmbInventory.SelectedValuePath = "CarId";
 
-            BindDataGrid();
-            System.Windows.Data.CollectionViewSource inventoryViewSource = ((System.Windows.Data.CollectionViewSource)(this.FindResource("inventoryViewSource")));
+            cmbInventory.ItemsSource = ctx.Inventories.Local;
+            //cmbInventory.DisplayMemberPath = "Title";
+            cmbInventory.SelectedValuePath = "BookId";
+
+            
             // Load data by setting the CollectionViewSource.Source property:
             // inventoryViewSource.Source = [generic data source]
+
+            BindDataGrid();
         }
         private void btnAdd_Click(object sender, RoutedEventArgs e)
         {
@@ -69,10 +82,23 @@ namespace Negrea_Daniel_Project
         private void btnNext_Click(object sender, RoutedEventArgs e)
         {
             customerVSource.View.MoveCurrentToNext();
+            
         }
         private void btnPrevious_Click(object sender, RoutedEventArgs e)
         {
             customerVSource.View.MoveCurrentToPrevious();
+            
+        }
+
+        private void btnNextIn_Click(object sender, RoutedEventArgs e)
+        {
+            inventoryVSource.View.MoveCurrentToNext();
+
+        }
+        private void btnPreviousIn_Click(object sender, RoutedEventArgs e)
+        {
+            inventoryVSource.View.MoveCurrentToPrevious();
+
         }
 
 
@@ -134,6 +160,17 @@ namespace Negrea_Daniel_Project
 
         }
 
+
+
+
+
+        
+
+
+
+
+
+
         private void gbOperations_Click(object sender, RoutedEventArgs e)
         {
             Button SelectedButton = (Button)e.OriginalSource;
@@ -179,12 +216,68 @@ namespace Negrea_Daniel_Project
                     SaveInventory();
                     break;
                 case "Orders":
+                    SaveOrders();
                     break;
             }
             ReInitialize();
         }
 
-
+        private void SaveInventory()
+        {
+            Inventory inventory = null;
+            if (action == ActionState.New)
+            {
+                try
+                {
+                    //instantiem Inventory entity
+                    inventory = new Inventory()
+                    {
+                        Author = authorTextBox.Text.Trim(),
+                        Title = titleTextBox.Text.Trim()
+                    };
+                    //adaugam entitatea nou creata in context
+                    ctx.Inventories.Add(inventory);
+                    inventoryVSource.View.Refresh();
+                    //salvam modificarile
+                    ctx.SaveChanges();
+                }
+                //using System.Data;
+                catch (DataException ex)
+                {
+                    MessageBox.Show(ex.Message);
+                }
+            }
+            else
+           if (action == ActionState.Edit)
+            {
+                try
+                {
+                    inventory = (Inventory)inventoryDataGrid.SelectedItem;
+                    inventory.Author = authorTextBox.Text.Trim();
+                    inventory.Title = titleTextBox.Text.Trim();
+                    //salvam modificarile
+                    ctx.SaveChanges();
+                }
+                catch (DataException ex)
+                {
+                    MessageBox.Show(ex.Message);
+                }
+            }
+            else if (action == ActionState.Delete)
+            {
+                try
+                {
+                    inventory = (Inventory)inventoryDataGrid.SelectedItem;
+                    ctx.Inventories.Remove(inventory);
+                    ctx.SaveChanges();
+                }
+                catch (DataException ex)
+                {
+                    MessageBox.Show(ex.Message);
+                }
+                inventoryVSource.View.Refresh();
+            }
+        }
 
         private void SaveOrders()
         {
@@ -200,7 +293,7 @@ namespace Negrea_Daniel_Project
                     {
 
                         CustId = customer.CustId,
-                        CarId = inventory.CarId
+                        BookId = inventory.BookId
                     };
                     //adaugam entitatea nou creata in context
                     ctx.Orders.Add(order);
@@ -212,6 +305,7 @@ namespace Negrea_Daniel_Project
                 {
                     MessageBox.Show(ex.Message);
                 }
+
             }
             else
            if (action == ActionState.Edit)
@@ -224,7 +318,7 @@ namespace Negrea_Daniel_Project
                     if (editedOrder != null)
                     {
                         editedOrder.CustId = Int32.Parse(cmbCustomers.SelectedValue.ToString());
-                        editedOrder.CarId = Convert.ToInt32(cmbInventory.SelectedValue.ToString());
+                        editedOrder.BookId = Convert.ToInt32(cmbInventory.SelectedValue.ToString());
                         //salvam modificarile
                         ctx.SaveChanges();
                     }
@@ -257,6 +351,7 @@ namespace Negrea_Daniel_Project
                     MessageBox.Show(ex.Message);
                 }
             }
+            customerVSource.View.Refresh();
         }
 
 
@@ -265,17 +360,17 @@ namespace Negrea_Daniel_Project
             var queryOrder = from ord in ctx.Orders
                              join cust in ctx.Customers on ord.CustId equals
                              cust.CustId
-                             join inv in ctx.Inventories on ord.CarId
-                 equals inv.CarId
+                             join inv in ctx.Inventories on ord.BookId
+                 equals inv.BookId
                              select new
                              {
                                  ord.OrderId,
-                                 ord.CarId,
+                                 ord.BookId,
                                  ord.CustId,
                                  cust.FirstName,
                                  cust.LastName,
-                                 inv.Make,
-                                 inv.Color
+                                 inv.Title,
+                                 inv.Author
                              };
             customerOrdersVSource.Source = queryOrder.ToList();
         }
