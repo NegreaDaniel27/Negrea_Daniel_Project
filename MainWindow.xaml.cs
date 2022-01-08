@@ -351,7 +351,7 @@ namespace Negrea_Daniel_Project
                     MessageBox.Show(ex.Message);
                 }
             }
-            customerVSource.View.Refresh();
+            customerOrdersVSource.View.Refresh();
         }
 
 
